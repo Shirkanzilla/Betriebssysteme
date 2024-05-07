@@ -8,9 +8,8 @@ char **readFile(FILE *fp){
 	char **arr=malloc(1*sizeof(char*));
 	size_t arrLength = 2;
 	using = 0;
-	char *s=malloc(100*sizeof(char));
-	if(s == NULL) printf("%s\n","malloc error");
-	while(s[0]!=EOF){
+	char startOfLine = fgetc(fp);
+	while(startOfLine!=EOF){
 		if(using >= arrLength){
 			printf("Before: %lu\n",arrLength);			
 			arrLength += 1;
