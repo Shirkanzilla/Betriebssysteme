@@ -6,7 +6,7 @@
 #include <linux/limits.h>
 #include <sys/wait.h>
 #include "plist.h"
-static int numOfProc = 0;
+static int numOfProc;
 
 static int changeDirectory(char **tokenized){
 	if(tokenized[1] == NULL || tokenized[2] != NULL){
@@ -36,21 +36,22 @@ static int executeCommand(char *fullCommand, char **tokenized, int using){
 	}else if(p == 0){
 		if(strcmp(tokenized[using-1],"&") == 0){
 			tokenized[using-1] = NULL;
-			numOfProc++;
 		}
+		tokenized[using] = NULL;
 		if(execvp(tokenized[0],tokenized) == -1){
 			perror("error while executing command");
 			exit(EXIT_FAILURE);
 		}
 	}else{
 		if(strcmp(tokenized[using-1],"&") == 0){
+			numOfProc++;
 			int retVal = insertElement(p,fullCommand);
 			if(retVal < 0) return retVal;
 			return 0;
 		}else{
 			waitpid(p, &status, 0);
 			if(WIFEXITED(status)){
-				printf("Exitstus [%s] = %d\n", fullCommand, (int)WEXITSTATUS(status));
+				printf("Exitstatus [%s] = %d\n", fullCommand, (int)WEXITSTATUS(status));
 			}else return 1;
 		}
 	}	
@@ -60,9 +61,8 @@ static int executeCommand(char *fullCommand, char **tokenized, int using){
 static int printBackgroundStatus(){
 	int status;
 	int finished = 0;
-	for(int i = 0; i <= numOfProc; i++){	
+	for(int i = 0; i < numOfProc; i++){	
 		pid_t p = waitpid(-1,&status,WNOHANG);
-		perror("printBackgroundStatus");
 		if(p == 0 || errno==10) break;
 		if(WIFEXITED(status)){
 			finished++;
@@ -78,22 +78,28 @@ static int printBackgroundStatus(){
 	return 0;
 }
 
-static int computeCommand(){
+int main(int argc, char *argv[]){
+	numOfProc = 0;
 	char **tokenized;
 	while(1){	
-		if(printBackgroundStatus()!=0) return 1;
+		if(printBackgroundStatus()!=0){
+			free(tokenized);       
+			return 1;
+		}
 		char cwd[PATH_MAX];
 		if(getcwd(cwd,sizeof(cwd))==NULL){
 			perror("getcwd() error");
+			free(tokenized);
 			return 1;
 		}
 		printf(cwd);
-		printf(":");
+		printf(": ");
 		//get next input line
 		char command[1337/sizeof(char)];
 		if(fgets(command,sizeof(command),stdin)==NULL){
 			if(feof(stdin)) break;
 			perror("error reading next line");
+			free(tokenized);
 			return 1;
 		}
 		//save full input for later display:
@@ -104,6 +110,7 @@ static int computeCommand(){
 		tokenized = calloc(1337,1);
 		if (tokenized == NULL){
 			perror("malloc failed");
+			free(tokenized);
 			return 1;
 		}
 		int using = 1;
@@ -119,16 +126,12 @@ static int computeCommand(){
 		tokenized = realloc(tokenized,using*sizeof(char*));
 		if(tokenized == NULL){
 			perror("realloc failed");
+			free(tokenized);
 			return 1;
 		}
-		int exitStatus = executeCommand(fullCommand, tokenized, using);
-		if(exitStatus != 0) return exitStatus;
+		executeCommand(fullCommand, tokenized, using);
 	}	
 	free(tokenized);	
 	return 0;	
-}
-
-int main(int argc, char *argv[]){
-	return computeCommand();
 }
 
