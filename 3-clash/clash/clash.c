@@ -82,14 +82,12 @@ int main(int argc, char *argv[]){
 	numOfProc = 0;
 	char **tokenized;
 	while(1){	
-		if(printBackgroundStatus()!=0){
-			free(tokenized);       
+		if(printBackgroundStatus()!=0){      
 			return 1;
 		}
 		char cwd[PATH_MAX];
 		if(getcwd(cwd,sizeof(cwd))==NULL){
 			perror("getcwd() error");
-			free(tokenized);
 			return 1;
 		}
 		printf(cwd);
@@ -99,7 +97,6 @@ int main(int argc, char *argv[]){
 		if(fgets(command,sizeof(command),stdin)==NULL){
 			if(feof(stdin)) break;
 			perror("error reading next line");
-			free(tokenized);
 			return 1;
 		}
 		//save full input for later display:
@@ -122,16 +119,18 @@ int main(int argc, char *argv[]){
 			using++;
 		}
 		using--;
-		if(tokenized[0] == NULL) continue;
-		tokenized = realloc(tokenized,using*sizeof(char*));
+		if(tokenized[0] == NULL){
+			free(tokenized);
+			continue;
+		}
 		if(tokenized == NULL){
 			perror("realloc failed");
 			free(tokenized);
 			return 1;
 		}
 		executeCommand(fullCommand, tokenized, using);
-	}	
-	free(tokenized);	
+		free(tokenized);
+	}		
 	return 0;	
 }
 
