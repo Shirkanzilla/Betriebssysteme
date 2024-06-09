@@ -6,7 +6,7 @@
 #include <linux/limits.h>
 #include <sys/wait.h>
 #include "plist.h"
-static int numOfProc;
+static int numOfProc;//maximum number of zombies
 
 static int changeDirectory(char **tokenized){
 	if(tokenized[1] == NULL || tokenized[2] != NULL){
@@ -16,18 +16,22 @@ static int changeDirectory(char **tokenized){
 	return 0;	
 }
 
+//callback function that prints pid and commandLine of every existing child process
 static bool printCallback(pid_t pid, const char *commandLine){
 	printf("%d %s\n", (int) pid, commandLine);
 	return true;
 }
 
+
 static int executeCommand(char *fullCommand, char **tokenized, int using){
 	bool (*ptr)() = &printCallback;
+	//check if cd or jobs is called
     	if(strcmp(tokenized[0],"cd") == 0) return changeDirectory(tokenized);
 	if(strcmp(tokenized[0],"jobs") == 0){ 
 		walkList(ptr);
 		return 0;
 	}
+	//executes command in a child process
 	pid_t p = fork();
 	int status;
 	if(p == -1){
@@ -58,6 +62,7 @@ static int executeCommand(char *fullCommand, char **tokenized, int using){
 	return 0;
 }
 
+//checks if any child has become a zombie and if so prints the exitstatus and removes it from the list
 static int printBackgroundStatus(){
 	int status;
 	int finished = 0;
