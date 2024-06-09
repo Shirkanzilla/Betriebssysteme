@@ -99,6 +99,11 @@ int main(int argc, char *argv[]){
 			perror("error reading next line");
 			return 1;
 		}
+		//check if maximum length is exceeded
+		if(strchr(command,'\n') == NULL){
+			printf("warning: maximum input length exceeded");
+			continue;
+		}
 		//save full input for later display:
 		char fullCommand[1337/sizeof(char)];
 		strcpy(fullCommand,command);
